@@ -47,7 +47,9 @@ def get_video_bitrate(probe):
 
 class EncodingTask:
     def __init__(self, filename, out_filename):
-        os.makedirs(os.path.dirname(out_filename), exist_ok=True)
+        dirname=os.path.dirname(out_filename)
+        if dirname:
+            os.makedirs(dirname, exist_ok=True)
         self.out_filename = out_filename
         self.log_filename = os.path.splitext(self.out_filename)[0] + ".log"
         self.stderr = open(self.log_filename, "w", encoding="utf8")
@@ -77,10 +79,10 @@ class EncodingTask:
         encoding_args = {
             # HWAccel for RPi4, may need to pick a different encoder
             # for HW accel on other systems
-            "c:v": "h264_v4l2m2m",
-            "num_output_buffers": 32,
-            "num_capture_buffers": 16,
-            "b:v": f"{bitrate}k",
+            "c:v": "libx265",
+            # "num_output_buffers": 32,
+            # "num_capture_buffers": 16,
+            # "b:v": f"{bitrate}k",
             "c:a": "copy",
             "progress": f"pipe:{self.pipe_write}"
         }
@@ -232,6 +234,9 @@ class EncodingManager:
                         f"Bitrate: {enc.encode_stats['bitrate']}\n" +
                         f"FPS: {enc.encode_stats['fps']}\n" +
                         f"Speed: {enc.encode_stats['speed']}\n" +
+                        f"q: {enc.encode_stats['stream_0_0_q']}\n" +
+                        f"dup: {enc.encode_stats['dup_frames']}\n" +
+                        f"drop: {enc.encode_stats['drop_frames']}\n" +
                         f"Est. Remaining: {str(enc.encode_stats['estimate_remaining'])}")
                 ui.contents[2][0].set_completion(enc.encode_stats["percent_done"])
         for k in complete:
@@ -267,7 +272,7 @@ if __name__ == "__main__":
                     out_filename = os.path.join(output_dir, os.path.splitext(os.path.relpath(filename, it))[0] + ".mp4")
                     all_files.append((filename, out_filename))
         else:
-            out_filename = os.path.join(output_dir, os.path.splitext(it)[0] + ".mp4")
+            out_filename = os.path.splitext(it)[0] + "-enc265.mp4"
             all_files.append((it, out_filename))
 
     parallel_encodes = 1
